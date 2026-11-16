@@ -1,0 +1,81 @@
+service:
+  name: aac-minio
+  image_repo: quay.io/minio/minio
+  image_tag: latest
+  description: S3 Compatible Object Storage (Terraform state backend)
+  icon: https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/minio.png
+  category: Management
+  stage: prod
+  hostname: minio
+ports:
+- name: api
+  port: 9000
+  external_port: 9000
+  protocol: TCP
+- name: console
+  port: 9001
+  external_port: 9010
+  protocol: TCP
+config:
+  domain_name: example.com
+  generate_hostname: false
+  integrations:
+    homepage:
+      enabled: true
+    autodns:
+      enabled: true
+      create_wildcard: true
+    traefik:
+      enabled: true
+      cert_resolver: ionos
+      entrypoint: websecure
+      service_port: 9001
+  schema_version: 2
+secrets:
+  MINIO_ROOT_USER: CHANGE_ME
+  MINIO_ROOT_PASSWORD: CHANGE_ME
+volumes:
+  data:
+    type: bind
+    source: /export/docker/aac-minio/data
+    target: /data
+    description: Persistent object storage
+deployment_strategy:
+  main:
+    enabled: true
+    target_stage: prod
+  dev:
+    enabled: true
+    target_stage: dev
+  test:
+    enabled: false
+    target_stage: test
+  ansible-dev:
+    enabled: true
+    target_stage: dev
+  iac-dev:
+    enabled: true
+    target_stage: dev
+  template-dev:
+    enabled: true
+    target_stage: dev
+deployments:
+  docker_compose:
+    restart_policy: unless-stopped
+    host_base_path: /export/docker
+    command:
+    - server
+    - /data
+    - --console-address
+    - :9001
+    networks_to_join:
+    - secured
+    - stack_internal
+    volumes:
+    - data:/data
+    environment:
+      TZ: '{{ vars.TZ }}'
+      MINIO_ROOT_USER: '{{ secrets.MINIO_ROOT_USER }}'
+      MINIO_ROOT_PASSWORD: '{{ secrets.MINIO_ROOT_PASSWORD }}'
+vars:
+  TZ: Europe/Berlin

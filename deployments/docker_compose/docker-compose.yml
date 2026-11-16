@@ -1,0 +1,67 @@
+services:
+  # --- Main Application Service ---
+  aac-minio:
+    image: "quay.io/minio/minio:latest"
+    container_name: "aac-minio"
+    hostname: "minio"
+    restart: "unless-stopped"
+
+    command:
+      - "server"
+      - "/data"
+      - "--console-address"
+      - ":9001"
+
+    environment:
+      TZ: "Europe/Berlin"
+      MINIO_ROOT_USER: "${MINIO_ROOT_USER:?set MINIO_ROOT_USER in .env (see .env.example)}"
+      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD in .env (see .env.example)}"
+    ports:
+      - "9000:9000/tcp"
+      - "9010:9001/tcp"
+
+    volumes:
+      - "/export/docker/aac-minio/data:/data"
+
+    networks:
+      - exposed
+      - interconnect
+      - secured
+      - stack_internal
+
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.aac-minio.rule: "Host(`minio.example.com`)"
+      traefik.http.routers.aac-minio.entrypoints: "websecure"
+      traefik.http.routers.aac-minio.tls: "true"
+      traefik.http.routers.aac-minio.tls.certresolver: "ionos"
+      traefik.docker.network: "services-secured"
+      traefik.http.services.aac-minio.loadbalancer.server.port: "9001"
+      traefik.http.services.aac-minio.loadbalancer.server.scheme: "http"
+      auto-dns.createWildcard.aac-minio: "true"
+      auto-dns.customDNS.aac-minio: "true"
+      auto-dns.customDOMAIN.aac-minio: "example.com"
+      auto-dns.customHost.aac-minio: "minio"
+      homepage.group: "Management"
+      homepage.name: "Minio"
+      homepage.href: "https://minio.example.com"
+      homepage.icon: "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/minio.png"
+      homepage.description: "S3 Compatible Object Storage (Terraform state backend)"
+
+
+
+
+networks:
+  secured:
+    name: "services-secured"
+    external: true
+  exposed:
+    name: "services-exposed"
+    external: true
+  interconnect:
+    name: "docker-default"
+    external: true
+  stack_internal:
+    name: "aac-minio_stack_internal"
+    driver: "bridge"
+
